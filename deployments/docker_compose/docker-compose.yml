@@ -1,0 +1,111 @@
+services:
+  # --- Main Application Service ---
+  aac-aria2:
+    image: "p3terx/ariang:test"
+    container_name: "aac-aria2"
+    hostname: "ariang"
+    restart: "unless-stopped"
+
+    command:
+      - "--port"
+      - "6880"
+      - "--ipv6"
+
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: "Europe/Berlin"
+      RCLONE_CONFIG: "/config/rclone.conf"
+      UPDATE_TRACKERS: "true"
+      LISTEN_PORT: "6888"
+      RPC_PORT: "6800"
+      IPV6_MODE: "false"
+      UMASK_SET: "1000"
+
+    ports:
+      - "26801:6880/tcp"
+
+    volumes:
+      - "/export/docker/aac-aria2/downloads:/downloads"
+
+    networks:
+      - exposed
+      - interconnect
+      - secured
+      - stack_internal
+
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.aac-aria2.rule: "Host(`ariang.example.com`)"
+      traefik.http.routers.aac-aria2.entrypoints: "websecure"
+      traefik.http.routers.aac-aria2.tls: "true"
+      traefik.http.routers.aac-aria2.tls.certresolver: "ionos"
+      traefik.docker.network: "services-secured"
+      traefik.http.services.aac-aria2.loadbalancer.server.port: "6880"
+      traefik.http.services.aac-aria2.loadbalancer.server.scheme: "http"
+      auto-dns.createWildcard.aac-aria2: "false"
+      auto-dns.customDNS.aac-aria2: "true"
+      auto-dns.customDOMAIN.aac-aria2: "example.com"
+      auto-dns.customHost.aac-aria2: "ariang"
+      homepage.group: "Admin - Tools"
+      homepage.name: "Aria2"
+      homepage.href: "https://ariang.example.com"
+      homepage.icon: "ariang.png"
+      homepage.description: "Aria2-Web-GUI für den Aria2 Download Server"
+
+
+    depends_on:
+      aria2:
+        condition: service_started
+
+
+  # --- Service Dependencies (Sidecars) ---
+  aria2:
+    image: "p3terx/aria2-pro:202209060423"
+    container_name: "aria2"
+    restart: "always"
+    
+
+    env_file:
+      - .env
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: "Europe/Berlin"
+      RCLONE_CONFIG: "/config/rclone.conf"
+      UPDATE_TRACKERS: "true"
+      LISTEN_PORT: "6888"
+      RPC_PORT: "6800"
+      IPV6_MODE: "false"
+      UMASK_SET: "1000"
+
+    ports:
+      - "6800:6800/tcp"
+      - "6888:6888/tcp"
+      - "6888:6888/udp"
+
+    volumes:
+      - "/export/docker/aac-aria2/downloads:/downloads"
+      - "/export/docker/aac-aria2/config:/config"
+
+    networks:
+      - stack_internal
+
+
+
+
+
+networks:
+  secured:
+    name: "services-secured"
+    external: true
+  exposed:
+    name: "services-exposed"
+    external: true
+  interconnect:
+    name: "docker-default"
+    external: true
+  stack_internal:
+    name: "aac-aria2_stack_internal"
+    driver: "bridge"
+

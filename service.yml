@@ -1,0 +1,115 @@
+service:
+  name: aac-aria2
+  image_repo: p3terx/ariang
+  image_tag: test
+  description: Aria2-Web-GUI für den Aria2 Download Server
+  icon: ariang.png
+  category: Admin - Tools
+  stage: prod
+  hostname: ariang
+ports:
+- name: web
+  port: 6880
+  external_port: 26801
+  protocol: TCP
+config:
+  domain_name: example.com
+  generate_hostname: false
+  integrations:
+    homepage:
+      enabled: true
+    autodns:
+      enabled: true
+    traefik:
+      enabled: true
+      cert_resolver: ionos
+      entrypoint: websecure
+  schema_version: 2
+stage_overrides:
+  prod:
+    config:
+      generate_hostname: false
+    service:
+      hostname: ariang
+volumes:
+  downloads:
+    description: Data for aria2-pro
+  config:
+    description: Data for aria2-pro
+deployment_strategy:
+  main:
+    enabled: true
+    target_stage: prod
+  dev:
+    enabled: true
+    target_stage: dev
+  test:
+    enabled: false
+    target_stage: test
+  ansible-dev:
+    enabled: true
+    target_stage: dev
+  iac-dev:
+    enabled: true
+    target_stage: dev
+  template-dev:
+    enabled: true
+    target_stage: dev
+deployments:
+  docker_compose:
+    restart_policy: unless-stopped
+    host_base_path: /export/docker
+    command:
+    - --port
+    - '6880'
+    - --ipv6
+    volumes:
+    - downloads:/downloads
+    environment:
+      PUID: '{{ vars.PUID }}'
+      PGID: '{{ vars.PGID }}'
+      TZ: '{{ vars.TZ }}'
+      RCLONE_CONFIG: '{{ vars.RCLONE_CONFIG }}'
+      UPDATE_TRACKERS: '{{ vars.UPDATE_TRACKERS }}'
+      LISTEN_PORT: '{{ vars.LISTEN_PORT }}'
+      RPC_PORT: '{{ vars.RPC_PORT }}'
+      IPV6_MODE: '{{ vars.IPV6_MODE }}'
+      UMASK_SET: '{{ vars.UMASK_SET }}'
+dependencies:
+  aria2-pro:
+    name: aria2
+    image_repo: p3terx/aria2-pro
+    image_tag: 202209060423
+    restart_policy: always
+    ports:
+    - 6800:6800/TCP
+    - 6888:6888/TCP
+    - 6888:6888/UDP
+    environment:
+      PUID: '1000'
+      PGID: '1000'
+      TZ: Europe/Berlin
+      RCLONE_CONFIG: /config/rclone.conf
+      UPDATE_TRACKERS: 'true'
+      LISTEN_PORT: '6888'
+      RPC_PORT: '6800'
+      IPV6_MODE: 'false'
+      UMASK_SET: '1000'
+    volumes:
+      downloads:
+        target: /downloads
+        description: Persistent storage for downloads
+      config:
+        target: /config
+        description: Persistent storage for config
+vars:
+  PUID: '1000'
+  PGID: '1000'
+  TZ: Europe/Berlin
+  RCLONE_CONFIG: /config/rclone.conf
+  UPDATE_TRACKERS: 'true'
+  LISTEN_PORT: '6888'
+  RPC_PORT: '6800'
+  IPV6_MODE: 'false'
+  UMASK_SET: '1000'
+secrets: {}
